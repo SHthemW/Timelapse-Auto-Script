@@ -88,6 +88,28 @@ wait_for_process() {
   return "$status"
 }
 
+cleanup_work_dir() {
+  local dir="$1"
+  local entry_name
+  local entry_path
+
+  [[ -d "$dir" ]] || fail "清理目录不存在: ${dir}"
+
+  log "清理工作目录，仅保留 hdr_enfuse 和 hdr_video"
+  while IFS= read -r -d '' entry_path; do
+    entry_name="$(basename "$entry_path")"
+    case "$entry_name" in
+      hdr_enfuse | hdr_video)
+        log "保留: ${entry_path}"
+        ;;
+      *)
+        log "删除: ${entry_path}"
+        rm -rf -- "$entry_path"
+        ;;
+    esac
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0)
+}
+
 trap cleanup_on_signal INT TERM
 
 log "开始自动 Timelapse 流程"
@@ -98,10 +120,12 @@ bracket_cmd="$(find_command brackerlapse bracketlapse)" \
   || fail "找不到 brackerlapse 或 bracketlapse，请确认 Bracketlapse 已经在 PATH 中"
 
 work_date="$(select_work_date)"
-work_dir="${AUTO_ROOT}/${work_date}"
+time_range_dir="${START_AT}-${END_AT}"
+work_dir="${AUTO_ROOT}/${work_date}/${time_range_dir}"
 
 log "当前时间规则: 04:00 后使用次日，否则使用当日"
 log "选定任务日期: ${work_date}"
+log "选定时间范围: ${time_range_dir}"
 log "工作目录: ${work_dir}"
 
 mkdir -p "$work_dir"
@@ -140,5 +164,7 @@ log "拍摄任务完成，等待 Bracketlapse 检测目录静息并自动处理"
 if ! wait_for_process "$bracket_pid" "Bracketlapse standby"; then
   fail "Bracketlapse 处理失败"
 fi
+
+cleanup_work_dir "$work_dir"
 
 log "Bracketlapse 处理完成，脚本退出"
