@@ -2,19 +2,77 @@
 
 load_config() {
   local script_dir="$1"
-  local config_path="${AUTO_TIMELAPSE_CONFIG:-${script_dir}/config/auto_timelapse.conf}"
+  local config_path="${AUTO_TIMELAPSE_CONFIG:-${script_dir}/config/auto_timelapse.yaml}"
+  local config_values
+  local config_key
+  local config_value
+  local yaml_auto_root=""
+  local yaml_capture_interval_seconds=""
+  local yaml_watch_quiet_seconds=""
+  local yaml_morning_start_at=""
+  local yaml_morning_end_at=""
+  local yaml_dusk_start_at=""
+  local yaml_dusk_end_at=""
 
   [[ -f "$config_path" ]] || fail "配置文件不存在: ${config_path}"
 
-  # shellcheck source=/dev/null
-  source "$config_path"
+  if ! config_values="$(ruby -r yaml -e '
+    def fetch_value(data, *keys)
+      keys.reduce(data) { |memo, key| memo.is_a?(Hash) ? memo[key] : nil }
+    end
 
-  AUTO_ROOT="${AUTO_ROOT:-${AUTO_TIMELAPSE_ROOT:-/Users/shw/Pictures/AutoTimelapse}}"
-  CAPTURE_INTERVAL_SECONDS="${CAPTURE_INTERVAL_SECONDS:-6}"
-  WATCH_QUIET_SECONDS="${WATCH_QUIET_SECONDS:-60}"
-  MORNING_START_AT="${MORNING_START_AT:-${START_AT:-03:00}}"
-  MORNING_END_AT="${MORNING_END_AT:-${END_AT:-09:00}}"
-  DUSK_START_AT="${DUSK_START_AT:-}"
-  DUSK_END_AT="${DUSK_END_AT:-}"
+    config_path = ARGV.fetch(0)
+    data = YAML.load_file(config_path) || {}
+
+    values = {
+      "auto_root" => fetch_value(data, "auto_root"),
+      "capture_interval_seconds" => fetch_value(data, "capture_interval_seconds"),
+      "watch_quiet_seconds" => fetch_value(data, "watch_quiet_seconds"),
+      "morning_start_at" => fetch_value(data, "morning", "start_at"),
+      "morning_end_at" => fetch_value(data, "morning", "end_at"),
+      "dusk_start_at" => fetch_value(data, "dusk", "start_at"),
+      "dusk_end_at" => fetch_value(data, "dusk", "end_at")
+    }
+
+    values.each do |key, value|
+      printf "%s\t%s\n", key, value.nil? ? "" : value
+    end
+  ' "$config_path")"; then
+    fail "读取配置文件失败: ${config_path}"
+  fi
+
+  while IFS=$'\t' read -r config_key config_value; do
+    case "$config_key" in
+      auto_root)
+        yaml_auto_root="$config_value"
+        ;;
+      capture_interval_seconds)
+        yaml_capture_interval_seconds="$config_value"
+        ;;
+      watch_quiet_seconds)
+        yaml_watch_quiet_seconds="$config_value"
+        ;;
+      morning_start_at)
+        yaml_morning_start_at="$config_value"
+        ;;
+      morning_end_at)
+        yaml_morning_end_at="$config_value"
+        ;;
+      dusk_start_at)
+        yaml_dusk_start_at="$config_value"
+        ;;
+      dusk_end_at)
+        yaml_dusk_end_at="$config_value"
+        ;;
+    esac
+  done <<< "$config_values"
+
+  AUTO_ROOT="${AUTO_ROOT:-${AUTO_TIMELAPSE_ROOT:-${yaml_auto_root:-/Users/shw/Pictures/AutoTimelapse}}}"
+  CAPTURE_INTERVAL_SECONDS="${CAPTURE_INTERVAL_SECONDS:-${yaml_capture_interval_seconds:-6}}"
+  WATCH_QUIET_SECONDS="${WATCH_QUIET_SECONDS:-${yaml_watch_quiet_seconds:-60}}"
+  MORNING_START_AT="${MORNING_START_AT:-${START_AT:-${yaml_morning_start_at:-03:00}}}"
+  MORNING_END_AT="${MORNING_END_AT:-${END_AT:-${yaml_morning_end_at:-09:00}}}"
+  DUSK_START_AT="${DUSK_START_AT:-${yaml_dusk_start_at:-}}"
+  DUSK_END_AT="${DUSK_END_AT:-${yaml_dusk_end_at:-}}"
   AUTO_TIMELAPSE_CONFIG_PATH="$config_path"
 }
