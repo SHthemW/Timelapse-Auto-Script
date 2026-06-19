@@ -16,6 +16,12 @@ time_to_minutes() {
   printf '%d\n' "$((10#$hour * 60 + 10#$minute))"
 }
 
+time_to_dir_component() {
+  local value="$1"
+
+  printf '%s\n' "${value//:/}"
+}
+
 validate_time_range() {
   local label="$1"
   local start_at="$2"
@@ -91,5 +97,5 @@ select_time_slot() {
   SELECTED_START_AT="$start_at"
   SELECTED_END_AT="$end_at"
   SELECTED_WORK_DATE="$work_date"
-  SELECTED_TIME_RANGE_DIR="${start_at}-${end_at}"
+  SELECTED_TIME_RANGE_DIR="$(time_to_dir_component "$start_at")-$(time_to_dir_component "$end_at")"
 }
