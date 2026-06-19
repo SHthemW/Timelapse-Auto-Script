@@ -18,6 +18,7 @@ cleanup_on_signal() {
   log "收到中断信号，正在清理后台进程"
   terminate_process "$camera_pid" "camera-timelapse"
   terminate_process "$bracket_pid" "Bracketlapse standby"
+  bracketlapse_finish_output_monitor
   exit 130
 }
 
@@ -81,11 +82,13 @@ run_timelapse() {
   log "使用 Bracketlapse 命令: ${bracket_cmd}"
   webhook_notify_event "started" "任务已开始：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
 
+  bracketlapse_begin_output_monitor "$work_dir" "$work_date" "$start_at" "$end_at" "$SELECTED_SLOT_LABEL"
   log "启动 Bracketlapse 监听: 目录=${work_dir}, 静息判定=${WATCH_QUIET_SECONDS}s"
   BRACKLAPSE_RUN_DATE="$work_date" \
     BRACKLAPSE_RUN_START_AT="$start_at" \
     BRACKLAPSE_RUN_END_AT="$end_at" \
-    "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" &
+    "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" \
+    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE") 2>&1 &
   bracket_pid=$!
   log "Bracketlapse 监听进程已启动, pid=${bracket_pid}"
   webhook_notify_event "entered_key_node" "已进入关键节点：Bracketlapse 监听处理已开始，目录 ${work_dir}"
@@ -139,6 +142,8 @@ run_timelapse() {
       webhook_notify_event "exited_key_node" "关键节点已结束：Bracketlapse 已完成，目录 ${work_dir}"
     fi
   fi
+
+  bracketlapse_finish_output_monitor
 
   if [[ "$WEBHOOK_ENABLED" -eq 1 && "$WEBHOOK_PUSH_IMAGE" -eq 1 ]]; then
     if webhook_prepare_image "$work_dir"; then

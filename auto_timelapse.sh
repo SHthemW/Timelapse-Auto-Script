@@ -16,6 +16,8 @@ source "${SCRIPT_DIR}/lib/disk.sh"
 source "${SCRIPT_DIR}/lib/webhook.sh"
 # shellcheck source=lib/webhook_image.sh
 source "${SCRIPT_DIR}/lib/webhook_image.sh"
+# shellcheck source=lib/bracketlapse_notify.sh
+source "${SCRIPT_DIR}/lib/bracketlapse_notify.sh"
 # shellcheck source=lib/runner.sh
 source "${SCRIPT_DIR}/lib/runner.sh"
 
