@@ -9,6 +9,24 @@ fail() {
   exit 1
 }
 
+pause_and_exit() {
+  local message="$1"
+  local prompt="${2:-请按回车键继续}"
+
+  log "$message"
+  printf '%s' "$prompt"
+
+  if [[ -r /dev/tty ]]; then
+    read -r _ </dev/tty || true
+  elif [[ -t 0 ]]; then
+    read -r _ || true
+  else
+    sleep 5
+  fi
+
+  exit 1
+}
+
 find_command() {
   local candidate
   for candidate in "$@"; do

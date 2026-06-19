@@ -14,7 +14,31 @@ load_config() {
   local yaml_dusk_start_at=""
   local yaml_dusk_end_at=""
 
-  [[ -f "$config_path" ]] || fail "配置文件不存在: ${config_path}"
+  if [[ ! -f "$config_path" ]]; then
+    mkdir -p "$(dirname "$config_path")"
+    cat >"$config_path" <<'EOF'
+# Auto Timelapse 配置文件。
+#
+# 可通过环境变量 AUTO_TIMELAPSE_CONFIG 指定其他配置文件路径。
+
+auto_root:
+capture_interval_seconds:
+watch_quiet_seconds:
+
+morning:
+  start_at:
+  end_at:
+
+# 黄昏时间段需要按季节或拍摄需求设置。
+# dusk:
+#   start_at:
+#   end_at:
+dusk:
+  start_at:
+  end_at:
+EOF
+    pause_and_exit "检测到配置文件不存在，已自动创建空配置文件: ${config_path}" "请完善配置文件后按回车键退出"
+  fi
 
   if ! config_values="$(ruby -r yaml -e '
     def fetch_value(data, *keys)

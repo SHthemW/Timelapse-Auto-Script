@@ -67,9 +67,19 @@ load_webhook_config() {
   WEBHOOK_IMAGE_BODY_TEMPLATE=""
 
   if [[ ! -f "$config_path" ]]; then
-    log "webhook配置检查: 未找到配置文件，已跳过，路径=${config_path}"
-    export WEBHOOK_CONFIG_LOADED=1 WEBHOOK_CONFIG_PATH WEBHOOK_ENABLED WEBHOOK_URL WEBHOOK_BODY_TEMPLATE WEBHOOK_PUSH_IMAGE WEBHOOK_IMAGE_BODY_TEMPLATE
-    return 0
+    mkdir -p "$(dirname "$config_path")"
+    cat >"$config_path" <<'EOF'
+# webhook 配置。
+# enabled 为 true 时才会执行推送。
+# body 必须包含 __CONTENT__ 占位符。
+# image_body 在 push_image 为 true 时必须包含 __IMGBASE64__ 和 __IMGMD5__ 占位符。
+enabled:
+url:
+body:
+push_image:
+image_body:
+EOF
+    pause_and_exit "检测到 webhook 配置文件不存在，已自动创建空配置文件: ${config_path}" "请完善 webhook 配置文件后按回车键退出"
   fi
 
   if ! config_values="$(ruby -r yaml -e '
