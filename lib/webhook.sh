@@ -125,12 +125,12 @@ EOF
     esac
   done <<< "$config_values"
 
-  case "${yaml_enabled,,}" in
+  case "$(printf '%s' "$yaml_enabled" | tr '[:upper:]' '[:lower:]')" in
     true|1|yes|on) WEBHOOK_ENABLED=1 ;;
     *) WEBHOOK_ENABLED=0 ;;
   esac
 
-  case "${yaml_push_image,,}" in
+  case "$(printf '%s' "$yaml_push_image" | tr '[:upper:]' '[:lower:]')" in
     true|1|yes|on) WEBHOOK_PUSH_IMAGE=1 ;;
     *) WEBHOOK_PUSH_IMAGE=0 ;;
   esac
