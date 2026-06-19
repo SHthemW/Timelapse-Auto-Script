@@ -1,0 +1,9 @@
+# webhook 配置。
+# enabled 为 true 时才会执行推送。
+# body 必须包含 __CONTENT__ 占位符。
+# image_body 在 push_image 为 true 时必须包含 __IMGBASE64__ 和 __IMGMD5__ 占位符。
+enabled: false
+url: ""
+body: "{\"content\":\"__CONTENT__\",\"time\":\"__TIME__\"}"
+push_image: false
+image_body: "{\"content\":\"__CONTENT__\",\"time\":\"__TIME__\",\"image\":\"__IMGBASE64__\",\"md5\":\"__IMGMD5__\"}"

@@ -13,6 +13,9 @@ log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
 
+# shellcheck source=lib/webhook.sh
+source "${SCRIPT_DIR}/lib/webhook.sh"
+
 terminate_current_run() {
   if [[ -n "$current_pid" ]] && kill -0 "$current_pid" >/dev/null 2>&1; then
     log "正在停止当前延时摄影任务, pid=${current_pid}"
@@ -50,6 +53,8 @@ main() {
     log "错误: 找不到自动 Timelapse 脚本: ${RUNNER_PATH}"
     exit 1
   }
+
+  load_webhook_config "$SCRIPT_DIR"
 
   trap request_stop INT TERM
 

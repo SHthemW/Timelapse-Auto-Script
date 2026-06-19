@@ -10,6 +10,10 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/config.sh"
 # shellcheck source=lib/schedule.sh
 source "${SCRIPT_DIR}/lib/schedule.sh"
+# shellcheck source=lib/webhook.sh
+source "${SCRIPT_DIR}/lib/webhook.sh"
+# shellcheck source=lib/webhook_image.sh
+source "${SCRIPT_DIR}/lib/webhook_image.sh"
 # shellcheck source=lib/runner.sh
 source "${SCRIPT_DIR}/lib/runner.sh"
 
@@ -21,6 +25,7 @@ main() {
   trap cleanup_on_signal INT TERM
 
   load_config "$SCRIPT_DIR"
+  load_webhook_config "$SCRIPT_DIR"
   validate_schedule_config
 
   log "开始自动 Timelapse 流程"
@@ -40,6 +45,7 @@ main() {
   log "选定任务日期: ${SELECTED_WORK_DATE}"
   log "选定时间范围: ${SELECTED_TIME_RANGE_DIR}"
   log "工作目录: ${work_dir}"
+  webhook_notify_event "scheduled" "任务已预定：${SELECTED_SLOT_LABEL}延时摄影，日期 ${SELECTED_WORK_DATE}，时间段 ${SELECTED_START_AT}-${SELECTED_END_AT}，工作目录 ${work_dir}"
 
   run_timelapse \
     "$camera_cmd" \

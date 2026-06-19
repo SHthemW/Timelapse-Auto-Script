@@ -69,43 +69,84 @@ run_timelapse() {
   local work_date="$4"
   local start_at="$5"
   local end_at="$6"
+  local workflow_status=0
+  local camera_status=0
+  local bracket_status=0
+  local bracket_ready=0
 
   mkdir -p "$work_dir"
   log "已创建或确认工作目录存在"
 
   log "使用 camera-timelapse 命令: ${camera_cmd}"
   log "使用 Bracketlapse 命令: ${bracket_cmd}"
+  webhook_notify_event "started" "任务已开始：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
 
   log "启动 Bracketlapse 监听: 目录=${work_dir}, 静息判定=${WATCH_QUIET_SECONDS}s"
   "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" &
   bracket_pid=$!
   log "Bracketlapse 监听进程已启动, pid=${bracket_pid}"
+  webhook_notify_event "entered_key_node" "已进入关键节点：Bracketlapse 监听处理已开始，目录 ${work_dir}"
 
   sleep 2
   if ! kill -0 "$bracket_pid" >/dev/null 2>&1; then
     wait_for_process "$bracket_pid" "Bracketlapse standby" || true
-    fail "Bracketlapse 监听启动失败"
+    workflow_status=1
+    log "Bracketlapse 监听启动失败"
+  else
+    bracket_ready=1
   fi
 
-  log "启动 camera-timelapse 拍摄任务: ${work_date} ${start_at}-${end_at}, 间隔=${CAPTURE_INTERVAL_SECONDS}s"
-  "$camera_cmd" "$work_dir" \
-    --start-at "$start_at" \
-    --start-day "$work_date" \
-    --end-at "$end_at" \
-    --end-day "$work_date" \
-    --interval "$CAPTURE_INTERVAL_SECONDS" &
-  camera_pid=$!
-  log "camera-timelapse 进程已启动, pid=${camera_pid}"
+  if [[ "$bracket_ready" -eq 1 ]]; then
+    log "启动 camera-timelapse 拍摄任务: ${work_date} ${start_at}-${end_at}, 间隔=${CAPTURE_INTERVAL_SECONDS}s"
+    "$camera_cmd" "$work_dir" \
+      --start-at "$start_at" \
+      --start-day "$work_date" \
+      --end-at "$end_at" \
+      --end-day "$work_date" \
+      --interval "$CAPTURE_INTERVAL_SECONDS" &
+    camera_pid=$!
+    log "camera-timelapse 进程已启动, pid=${camera_pid}"
+    webhook_notify_event "entered_key_node" "已进入关键节点：camera-timelapse 开始拍摄，日期 ${work_date}，时间段 ${start_at}-${end_at}"
 
-  if ! wait_for_process "$camera_pid" "camera-timelapse"; then
-    terminate_process "$bracket_pid" "Bracketlapse standby"
-    fail "拍摄任务失败，已停止监听"
+    set +e
+    wait_for_process "$camera_pid" "camera-timelapse"
+    camera_status=$?
+    set -e
+    if [[ "$camera_status" -ne 0 ]]; then
+      workflow_status=1
+      webhook_notify_event "exited_key_node" "关键节点已结束：camera-timelapse 退出码 ${camera_status}，日期 ${work_date}，时间段 ${start_at}-${end_at}"
+      terminate_process "$bracket_pid" "Bracketlapse standby"
+      log "拍摄任务失败，已停止监听"
+    else
+      webhook_notify_event "exited_key_node" "关键节点已结束：camera-timelapse 已完成，日期 ${work_date}，时间段 ${start_at}-${end_at}"
+    fi
   fi
 
   log "拍摄任务完成，等待 Bracketlapse 检测目录静息并自动处理"
-  if ! wait_for_process "$bracket_pid" "Bracketlapse standby"; then
-    fail "Bracketlapse 处理失败"
+  if [[ "$bracket_ready" -eq 1 ]]; then
+    set +e
+    wait_for_process "$bracket_pid" "Bracketlapse standby"
+    bracket_status=$?
+    set -e
+    if [[ "$bracket_status" -ne 0 ]]; then
+      workflow_status=1
+      webhook_notify_event "exited_key_node" "关键节点已结束：Bracketlapse 退出码 ${bracket_status}，目录 ${work_dir}"
+      log "Bracketlapse 处理失败"
+    else
+      webhook_notify_event "exited_key_node" "关键节点已结束：Bracketlapse 已完成，目录 ${work_dir}"
+    fi
+  fi
+
+  if [[ "$WEBHOOK_ENABLED" -eq 1 && "$WEBHOOK_PUSH_IMAGE" -eq 1 ]]; then
+    if webhook_prepare_image "$work_dir"; then
+      webhook_notify_image "webhook-image" "图片推送：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}"
+    fi
   fi
 
   cleanup_work_dir "$work_dir"
+  webhook_notify_event "ended" "任务已结束：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
+
+  if [[ "$workflow_status" -ne 0 || "$camera_status" -ne 0 || "$bracket_status" -ne 0 ]]; then
+    return 1
+  fi
 }
