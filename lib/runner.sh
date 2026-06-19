@@ -147,6 +147,7 @@ run_timelapse() {
   fi
 
   cleanup_work_dir "$work_dir"
+  disk_check_space "$work_dir" "$DISK_SPACE_WARNING_THRESHOLD_GB"
   webhook_notify_event "ended" "任务已结束：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
 
   if [[ "$workflow_status" -ne 0 || "$camera_status" -ne 0 || "$bracket_status" -ne 0 ]]; then

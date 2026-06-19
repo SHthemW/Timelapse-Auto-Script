@@ -71,7 +71,12 @@ select_time_slot() {
   dusk_start="$(time_to_minutes "$DUSK_START_AT")"
   dusk_end="$(time_to_minutes "$DUSK_END_AT")"
 
-  if ((now_minutes >= morning_start && now_minutes < morning_end)); then
+  if ((now_minutes < morning_start)); then
+    label="清晨"
+    start_at="$MORNING_START_AT"
+    end_at="$MORNING_END_AT"
+    work_date="$today"
+  elif ((now_minutes >= morning_start && now_minutes < morning_end)); then
     label="清晨"
     start_at="$MORNING_START_AT"
     end_at="$MORNING_END_AT"

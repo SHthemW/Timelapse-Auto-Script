@@ -9,6 +9,7 @@ load_config() {
   local yaml_auto_root=""
   local yaml_capture_interval_seconds=""
   local yaml_watch_quiet_seconds=""
+  local yaml_disk_space_warning_threshold_gb=""
   local yaml_morning_start_at=""
   local yaml_morning_end_at=""
   local yaml_dusk_start_at=""
@@ -24,6 +25,7 @@ load_config() {
 auto_root:
 capture_interval_seconds:
 watch_quiet_seconds:
+disk_space_warning_threshold_gb:
 
 morning:
   start_at:
@@ -52,6 +54,7 @@ EOF
       "auto_root" => fetch_value(data, "auto_root"),
       "capture_interval_seconds" => fetch_value(data, "capture_interval_seconds"),
       "watch_quiet_seconds" => fetch_value(data, "watch_quiet_seconds"),
+      "disk_space_warning_threshold_gb" => fetch_value(data, "disk_space_warning_threshold_gb"),
       "morning_start_at" => fetch_value(data, "morning", "start_at"),
       "morning_end_at" => fetch_value(data, "morning", "end_at"),
       "dusk_start_at" => fetch_value(data, "dusk", "start_at"),
@@ -76,6 +79,9 @@ EOF
       watch_quiet_seconds)
         yaml_watch_quiet_seconds="$config_value"
         ;;
+      disk_space_warning_threshold_gb)
+        yaml_disk_space_warning_threshold_gb="$config_value"
+        ;;
       morning_start_at)
         yaml_morning_start_at="$config_value"
         ;;
@@ -94,9 +100,16 @@ EOF
   AUTO_ROOT="${AUTO_ROOT:-${AUTO_TIMELAPSE_ROOT:-${yaml_auto_root:-/Users/shw/Pictures/AutoTimelapse}}}"
   CAPTURE_INTERVAL_SECONDS="${CAPTURE_INTERVAL_SECONDS:-${yaml_capture_interval_seconds:-6}}"
   WATCH_QUIET_SECONDS="${WATCH_QUIET_SECONDS:-${yaml_watch_quiet_seconds:-60}}"
+  DISK_SPACE_WARNING_THRESHOLD_GB="${DISK_SPACE_WARNING_THRESHOLD_GB:-${yaml_disk_space_warning_threshold_gb:-0}}"
   MORNING_START_AT="${MORNING_START_AT:-${START_AT:-${yaml_morning_start_at:-03:00}}}"
   MORNING_END_AT="${MORNING_END_AT:-${END_AT:-${yaml_morning_end_at:-09:00}}}"
   DUSK_START_AT="${DUSK_START_AT:-${yaml_dusk_start_at:-}}"
   DUSK_END_AT="${DUSK_END_AT:-${yaml_dusk_end_at:-}}"
   AUTO_TIMELAPSE_CONFIG_PATH="$config_path"
+
+  if [[ "$DISK_SPACE_WARNING_THRESHOLD_GB" =~ ^[0-9]+([.][0-9]+)?$ ]] && awk "BEGIN { exit !($DISK_SPACE_WARNING_THRESHOLD_GB > 0) }"; then
+    log "磁盘空间警告阈值: ${DISK_SPACE_WARNING_THRESHOLD_GB}GB"
+  else
+    DISK_SPACE_WARNING_THRESHOLD_GB=0
+  fi
 }

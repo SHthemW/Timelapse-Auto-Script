@@ -26,7 +26,11 @@ webhook_file_md5() {
 webhook_file_base64() {
   local file_path="$1"
 
-  base64 "$file_path" | tr -d '\n'
+  if base64 --help 2>&1 | grep -q -- '--wrap'; then
+    base64 -w 0 "$file_path"
+  else
+    base64 -b 0 -i "$file_path"
+  fi
 }
 
 webhook_compress_image() {

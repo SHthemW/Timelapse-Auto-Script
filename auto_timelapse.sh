@@ -10,6 +10,8 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/config.sh"
 # shellcheck source=lib/schedule.sh
 source "${SCRIPT_DIR}/lib/schedule.sh"
+# shellcheck source=lib/disk.sh
+source "${SCRIPT_DIR}/lib/disk.sh"
 # shellcheck source=lib/webhook.sh
 source "${SCRIPT_DIR}/lib/webhook.sh"
 # shellcheck source=lib/webhook_image.sh
