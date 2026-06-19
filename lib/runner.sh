@@ -82,7 +82,10 @@ run_timelapse() {
   webhook_notify_event "started" "任务已开始：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
 
   log "启动 Bracketlapse 监听: 目录=${work_dir}, 静息判定=${WATCH_QUIET_SECONDS}s"
-  "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" &
+  BRACKLAPSE_RUN_DATE="$work_date" \
+    BRACKLAPSE_RUN_START_AT="$start_at" \
+    BRACKLAPSE_RUN_END_AT="$end_at" \
+    "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" &
   bracket_pid=$!
   log "Bracketlapse 监听进程已启动, pid=${bracket_pid}"
   webhook_notify_event "entered_key_node" "已进入关键节点：Bracketlapse 监听处理已开始，目录 ${work_dir}"
