@@ -16,6 +16,8 @@ source "${SCRIPT_DIR}/lib/disk.sh"
 source "${SCRIPT_DIR}/lib/webhook.sh"
 # shellcheck source=lib/webhook_image.sh
 source "${SCRIPT_DIR}/lib/webhook_image.sh"
+# shellcheck source=lib/camera_notify.sh
+source "${SCRIPT_DIR}/lib/camera_notify.sh"
 # shellcheck source=lib/bracketlapse_notify.sh
 source "${SCRIPT_DIR}/lib/bracketlapse_notify.sh"
 # shellcheck source=lib/runner.sh
@@ -49,7 +51,7 @@ main() {
   log "选定任务日期: ${SELECTED_WORK_DATE}"
   log "选定时间范围: ${SELECTED_TIME_RANGE_DIR}"
   log "工作目录: ${work_dir}"
-  webhook_notify_event "scheduled" "任务已预定：${SELECTED_SLOT_LABEL}延时摄影，日期 ${SELECTED_WORK_DATE}，时间段 ${SELECTED_START_AT}-${SELECTED_END_AT}，工作目录 ${work_dir}"
+  webhook_notify_event "scheduled" "拍摄预约已创建：${SELECTED_SLOT_LABEL}延时摄影计划于 ${SELECTED_WORK_DATE} ${SELECTED_START_AT}-${SELECTED_END_AT} 执行，工作目录 ${work_dir}"
 
   run_timelapse \
     "$camera_cmd" \

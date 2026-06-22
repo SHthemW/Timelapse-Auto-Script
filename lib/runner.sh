@@ -18,6 +18,7 @@ cleanup_on_signal() {
   log "收到中断信号，正在清理后台进程"
   terminate_process "$camera_pid" "camera-timelapse"
   terminate_process "$bracket_pid" "Bracketlapse standby"
+  camera_finish_output_monitor
   bracketlapse_finish_output_monitor
   exit 130
 }
@@ -80,7 +81,7 @@ run_timelapse() {
 
   log "使用 camera-timelapse 命令: ${camera_cmd}"
   log "使用 Bracketlapse 命令: ${bracket_cmd}"
-  webhook_notify_event "started" "任务已开始：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}，工作目录 ${work_dir}"
+  webhook_notify_event "runner_started" "拍摄预约已进入守护状态：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，计划时间段 ${start_at}-${end_at}，等待实际拍摄开始，工作目录 ${work_dir}"
 
   bracketlapse_begin_output_monitor "$work_dir" "$work_date" "$start_at" "$end_at" "$SELECTED_SLOT_LABEL"
   log "启动 Bracketlapse 监听: 目录=${work_dir}, 静息判定=${WATCH_QUIET_SECONDS}s"
@@ -103,28 +104,29 @@ run_timelapse() {
   fi
 
   if [[ "$bracket_ready" -eq 1 ]]; then
-    log "启动 camera-timelapse 拍摄任务: ${work_date} ${start_at}-${end_at}, 间隔=${CAPTURE_INTERVAL_SECONDS}s"
-    "$camera_cmd" "$work_dir" \
+    log "启动 camera-timelapse 预约进程: ${work_date} ${start_at}-${end_at}, 间隔=${CAPTURE_INTERVAL_SECONDS}s"
+    camera_begin_output_monitor "$work_dir" "$work_date" "$start_at" "$end_at" "$SELECTED_SLOT_LABEL"
+    PYTHONUNBUFFERED=1 "$camera_cmd" "$work_dir" \
       --start-at "$start_at" \
       --start-day "$work_date" \
       --end-at "$end_at" \
       --end-day "$work_date" \
-      --interval "$CAPTURE_INTERVAL_SECONDS" &
+      --interval "$CAPTURE_INTERVAL_SECONDS" \
+      > "$CAMERA_OUTPUT_PIPE" 2>&1 &
     camera_pid=$!
     log "camera-timelapse 进程已启动, pid=${camera_pid}"
-    webhook_notify_event "entered_key_node" "已进入关键节点：camera-timelapse 开始拍摄，日期 ${work_date}，时间段 ${start_at}-${end_at}"
+    webhook_notify_event "camera_process_started" "camera-timelapse 预约进程已启动，正在等待实际拍摄窗口：${SELECTED_SLOT_LABEL}延时摄影，日期 ${work_date}，时间段 ${start_at}-${end_at}"
 
     set +e
     wait_for_process "$camera_pid" "camera-timelapse"
     camera_status=$?
     set -e
+    camera_finish_output_monitor
     if [[ "$camera_status" -ne 0 ]]; then
       workflow_status=1
       webhook_notify_event "exited_key_node" "关键节点已结束：camera-timelapse 退出码 ${camera_status}，日期 ${work_date}，时间段 ${start_at}-${end_at}"
       terminate_process "$bracket_pid" "Bracketlapse standby"
       log "拍摄任务失败，已停止监听"
-    else
-      webhook_notify_event "exited_key_node" "关键节点已结束：camera-timelapse 已完成，日期 ${work_date}，时间段 ${start_at}-${end_at}"
     fi
   fi
 
