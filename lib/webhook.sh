@@ -21,14 +21,19 @@ webhook_render_template() {
 webhook_send_payload() {
   local payload="$1"
   local event_name="$2"
+  local payload_file
 
+  payload_file="$(mktemp)"
+  printf '%s' "$payload" > "$payload_file"
   if ! curl -fsS --connect-timeout 10 --max-time 30 \
-    --data-raw "$payload" \
+    --data-binary "@${payload_file}" \
     "$WEBHOOK_URL" >/dev/null; then
+    rm -f "$payload_file"
     log "webhook推送失败: ${event_name}"
     return 0
   fi
 
+  rm -f "$payload_file"
   log "webhook推送成功: ${event_name}"
 }
 
