@@ -36,7 +36,7 @@ start_bracketlapse_processing() {
     BRACKLAPSE_RUN_START_AT="$start_at" \
     BRACKLAPSE_RUN_END_AT="$end_at" \
     "$bracket_cmd" "$work_dir" --merge-subdirs \
-    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE") 2>&1 &
+    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE" >/dev/null) 2>&1 &
   bracket_pid=$!
   log "Bracketlapse 处理进程已启动, pid=${bracket_pid}"
 }
@@ -66,7 +66,7 @@ run_timelapse() {
     BRACKLAPSE_RUN_START_AT="$start_at" \
     BRACKLAPSE_RUN_END_AT="$end_at" \
     "$bracket_cmd" --standby "$work_dir" "$work_dir" "$WATCH_QUIET_SECONDS" \
-    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE") 2>&1 &
+    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE" >/dev/null) 2>&1 &
   bracket_pid=$!
   log "Bracketlapse 监听进程已启动, pid=${bracket_pid}"
   webhook_notify_event "entered_key_node" "已进入关键节点：Bracketlapse 监听处理已开始，目录 ${work_dir}"
