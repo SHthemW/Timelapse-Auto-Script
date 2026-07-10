@@ -20,6 +20,8 @@ source "${SCRIPT_DIR}/lib/webhook_image.sh"
 source "${SCRIPT_DIR}/lib/camera_notify.sh"
 # shellcheck source=lib/bracketlapse_notify.sh
 source "${SCRIPT_DIR}/lib/bracketlapse_notify.sh"
+# shellcheck source=lib/workflow_control.sh
+source "${SCRIPT_DIR}/lib/workflow_control.sh"
 # shellcheck source=lib/runner.sh
 source "${SCRIPT_DIR}/lib/runner.sh"
 
@@ -29,6 +31,7 @@ main() {
   local work_dir
 
   trap cleanup_on_signal INT TERM
+  trap finish_capture_early USR2
 
   load_config "$SCRIPT_DIR"
   load_webhook_config "$SCRIPT_DIR"

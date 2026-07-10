@@ -1,47 +1,5 @@
 #!/usr/bin/env bash
 
-camera_pid=""
-bracket_pid=""
-
-terminate_process() {
-  local pid="$1"
-  local name="$2"
-
-  if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
-    log "正在停止 ${name}, pid=${pid}"
-    kill "$pid" >/dev/null 2>&1 || true
-    wait "$pid" >/dev/null 2>&1 || true
-  fi
-}
-
-cleanup_on_signal() {
-  log "收到中断信号，正在清理后台进程"
-  terminate_process "$camera_pid" "camera-timelapse"
-  terminate_process "$bracket_pid" "Bracketlapse standby"
-  camera_finish_output_monitor
-  bracketlapse_finish_output_monitor
-  exit 130
-}
-
-wait_for_process() {
-  local pid="$1"
-  local name="$2"
-  local status
-
-  set +e
-  wait "$pid"
-  status=$?
-  set -e
-
-  if [[ "$status" -ne 0 ]]; then
-    log "${name} 退出码为 ${status}"
-  else
-    log "${name} 已正常完成"
-  fi
-
-  return "$status"
-}
-
 cleanup_work_dir() {
   local dir="$1"
   local entry_name
@@ -62,6 +20,25 @@ cleanup_work_dir() {
         ;;
     esac
   done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0)
+}
+
+start_bracketlapse_processing() {
+  local bracket_cmd="$1"
+  local work_dir="$2"
+  local work_date="$3"
+  local start_at="$4"
+  local end_at="$5"
+
+  bracketlapse_begin_output_monitor \
+    "$work_dir" "$work_date" "$start_at" "$end_at" "$SELECTED_SLOT_LABEL"
+  log "立即启动 Bracketlapse 处理和导出: 目录=${work_dir}"
+  BRACKLAPSE_RUN_DATE="$work_date" \
+    BRACKLAPSE_RUN_START_AT="$start_at" \
+    BRACKLAPSE_RUN_END_AT="$end_at" \
+    "$bracket_cmd" "$work_dir" --merge-subdirs \
+    > >(tee "$BRACKETLAPSE_OUTPUT_PIPE") 2>&1 &
+  bracket_pid=$!
+  log "Bracketlapse 处理进程已启动, pid=${bracket_pid}"
 }
 
 run_timelapse() {
@@ -121,8 +98,19 @@ run_timelapse() {
     wait_for_process "$camera_pid" "camera-timelapse"
     camera_status=$?
     set -e
+    camera_pid=""
+    if [[ "$finish_capture_early_requested" -ne 0 ]]; then
+      camera_status=0
+      log "拍摄已按 Ctrl+I 提前停止，Bracketlapse 将忽略不完整组"
+      terminate_process "$bracket_pid" "Bracketlapse standby"
+      bracket_pid=""
+      bracketlapse_finish_output_monitor
+      start_bracketlapse_processing \
+        "$bracket_cmd" "$work_dir" "$work_date" "$start_at" "$end_at"
+    fi
+
     camera_finish_output_monitor
-    if [[ "$camera_status" -ne 0 ]]; then
+    if [[ "$finish_capture_early_requested" -eq 0 && "$camera_status" -ne 0 ]]; then
       workflow_status=1
       webhook_notify_event "exited_key_node" "关键节点已结束：camera-timelapse 退出码 ${camera_status}，日期 ${work_date}，时间段 ${start_at}-${end_at}"
       terminate_process "$bracket_pid" "Bracketlapse standby"
@@ -130,10 +118,10 @@ run_timelapse() {
     fi
   fi
 
-  log "拍摄任务完成，等待 Bracketlapse 检测目录静息并自动处理"
+  log "拍摄任务完成，等待 Bracketlapse 完成后续处理和导出"
   if [[ "$bracket_ready" -eq 1 ]]; then
     set +e
-    wait_for_process "$bracket_pid" "Bracketlapse standby"
+    wait_for_process "$bracket_pid" "Bracketlapse"
     bracket_status=$?
     set -e
     if [[ "$bracket_status" -ne 0 ]]; then

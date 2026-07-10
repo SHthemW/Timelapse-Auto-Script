@@ -11,6 +11,7 @@ keyboard_listener_pid=""
 terminal_settings=""
 stop_requested=0
 stop_after_current_requested=0
+stop_after_current_reason=""
 
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -49,42 +50,62 @@ stop_keyboard_listener() {
 request_stop_after_current() {
   if [[ "$stop_after_current_requested" -eq 0 ]]; then
     stop_after_current_requested=1
+    stop_after_current_reason="Ctrl+U"
     log "收到 Ctrl+U，本时间段任务将继续完成，完成后不再启动下一时间段任务"
   fi
   stop_keyboard_listener
 }
 
-listen_for_stop_after_current() {
+request_finish_current_now() {
+  if [[ "$stop_after_current_requested" -eq 0 ]]; then
+    stop_after_current_requested=1
+    stop_after_current_reason="Ctrl+I"
+    log "收到 Ctrl+I，正在停止当前拍摄，后续处理和导出完成后不再启动下一时间段任务"
+  fi
+
+  if [[ -n "$current_pid" ]] && kill -0 "$current_pid" >/dev/null 2>&1; then
+    kill -USR2 "$current_pid" >/dev/null 2>&1 || true
+  fi
+  stop_keyboard_listener
+}
+
+listen_for_loop_shortcuts() {
   local key
   local loop_pid="$1"
 
   while IFS= read -r -n 1 key; do
-    if [[ "$key" == $'\025' ]]; then
-      kill -USR1 "$loop_pid" >/dev/null 2>&1 || true
-      return
-    fi
+    case "$key" in
+      $'\011')
+        kill -USR2 "$loop_pid" >/dev/null 2>&1 || true
+        return
+        ;;
+      $'\025')
+        kill -USR1 "$loop_pid" >/dev/null 2>&1 || true
+        return
+        ;;
+    esac
   done </dev/tty
 }
 
 start_keyboard_listener() {
   if [[ ! -t 0 || ! -r /dev/tty || ! -w /dev/tty ]]; then
-    log "当前不是交互式终端，Ctrl+U 快捷键不可用"
+    log "当前不是交互式终端，Ctrl+I 和 Ctrl+U 快捷键不可用"
     return
   fi
 
   terminal_settings="$(stty -g </dev/tty)" || {
     terminal_settings=""
-    log "无法读取终端设置，Ctrl+U 快捷键不可用"
+    log "无法读取终端设置，Ctrl+I 和 Ctrl+U 快捷键不可用"
     return
   }
 
   if ! stty -icanon -echo min 1 time 0 </dev/tty; then
     terminal_settings=""
-    log "无法启用终端按键监听，Ctrl+U 快捷键不可用"
+    log "无法启用终端按键监听，Ctrl+I 和 Ctrl+U 快捷键不可用"
     return
   fi
 
-  listen_for_stop_after_current "$$" &
+  listen_for_loop_shortcuts "$$" &
   keyboard_listener_pid=$!
 }
 
@@ -96,10 +117,11 @@ run_once() {
   log "已启动自动 Timelapse 子任务, pid=${current_pid}"
 
   while true; do
-    set +e
-    wait "$current_pid"
-    status=$?
-    set -e
+    if wait "$current_pid"; then
+      status=0
+    else
+      status=$?
+    fi
 
     if [[ "$stop_after_current_requested" -ne 0 ]] \
       && kill -0 "$current_pid" >/dev/null 2>&1; then
@@ -125,10 +147,12 @@ main() {
   trap stop_keyboard_listener EXIT
   trap request_stop INT TERM
   trap request_stop_after_current USR1
+  trap request_finish_current_now USR2
 
   log "开始永久循环自动 Timelapse，每次会按配置选择下一段清晨或黄昏任务"
   log "手动关闭此终端窗口或按 Ctrl+C 可停止循环"
   log "按 Ctrl+U 可在本时间段任务完成后停止循环"
+  log "按 Ctrl+I 可立即停止拍摄，并在处理和导出完成后停止循环"
   start_keyboard_listener
 
   while [[ "$stop_requested" -eq 0 && "$stop_after_current_requested" -eq 0 ]]; do
@@ -142,7 +166,7 @@ main() {
     fi
 
     if [[ "$stop_after_current_requested" -ne 0 ]]; then
-      log "本轮任务已结束，根据 Ctrl+U 请求，不再启动下一次清晨或黄昏任务"
+      log "本轮任务已结束，根据 ${stop_after_current_reason} 请求，不再启动下一次清晨或黄昏任务"
       break
     fi
 
