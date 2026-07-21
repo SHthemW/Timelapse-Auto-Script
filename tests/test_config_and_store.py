@@ -42,11 +42,19 @@ class ConfigAndStoreTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             self.manager.save_text("project", text)
 
-    def test_all_presets_can_be_created_before_manual_configuration(self) -> None:
+    def test_presets_create_expected_execution_modes(self) -> None:
         store = TaskStore(self.manager.load())
+        expected = {
+            "scheduled_once": "manual",
+            "scheduled_loop": "manual",
+            "manual": "manual",
+            "eternal": "eternal",
+        }
         for preset in PRESET_DESCRIPTIONS:
             task = store.create(preset, preset)
-            self.assertEqual(store.load(task["id"])["preset"], preset)
+            self.assertEqual(store.load(task["id"])["preset"], expected[preset])
+            if preset.startswith("scheduled_"):
+                self.assertNotIn("null", store.read_text(task["id"]))
         self.assertEqual(len(store.list_definitions()), len(PRESET_DESCRIPTIONS))
 
     def test_reconcile_does_not_overwrite_newer_terminal_state(self) -> None:

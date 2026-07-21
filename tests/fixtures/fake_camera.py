@@ -32,7 +32,7 @@ def main() -> int:
             f"Scheduled end time {args.end_at} reached; stopping after this round",
             flush=True,
         )
-    return 0
+    return int(os.environ.get("FAKE_CAMERA_EXIT_CODE", "0"))
 
 
 if __name__ == "__main__":

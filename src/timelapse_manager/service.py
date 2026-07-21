@@ -22,6 +22,7 @@ from timelapse_manager.process_utils import (
     resolve_command,
     terminate_tree,
 )
+from timelapse_manager.task_chain import TaskChainManager
 from timelapse_manager.task_store import ACTIVE_STATUSES, TaskStore
 
 
@@ -31,12 +32,14 @@ class ManagerService:
         self.config_manager = ConfigManager(self.paths)
         self.config: LoadedConfig
         self.store: TaskStore
+        self.chains: TaskChainManager
         self.reload()
 
     def reload(self) -> None:
         self.config = self.config_manager.load(create=True)
         self.store = TaskStore(self.config)
         self.store.ensure()
+        self.chains = TaskChainManager(self.store)
 
     def initialize(self) -> dict[str, str]:
         self.config_manager.ensure()
@@ -81,22 +84,9 @@ class ManagerService:
         return task, camera, bracket
 
     def start_task(self, task_id: str) -> dict[str, Any]:
-        self.validate_task_start(task_id)
+        task, _, _ = self.validate_task_start(task_id)
+        state = self._claim_start(task)
         with self.store.start_lock(task_id):
-            state = self.store.read_state(task_id, reconcile=True)
-            if state["status"] in ACTIVE_STATUSES:
-                raise TaskError(f"任务已经在运行，PID={state.get('runner_pid')}")
-            self.store.clear_controls(task_id)
-            state = self.store.default_state(task_id)
-            state.update(
-                {
-                    "status": "starting",
-                    "phase": "正在启动工作进程",
-                    "started_at": now_iso(),
-                    "ended_at": None,
-                }
-            )
-            self.store.write_state(task_id, state)
             command = self._worker_command(task_id)
             env = os.environ.copy()
             env["TIMELAPSE_MANAGER_ROOT"] = str(self.paths.root)
@@ -142,6 +132,34 @@ class ManagerService:
                 daemon=True,
             ).start()
         return self.store.read_state(task_id, reconcile=True)
+
+    def prepare_foreground_task(self, task_id: str) -> None:
+        task, _, _ = self.validate_task_start(task_id)
+        self._claim_start(task)
+
+    def _claim_start(self, task: dict[str, Any]) -> dict[str, Any]:
+        task_id = task["id"]
+        metadata = self.chains.metadata(task) or {}
+        with self.chains.lock(metadata.get("chain_id")):
+            self.chains.validate_start(task)
+            with self.store.start_lock(task_id):
+                state = self.store.read_state(task_id, reconcile=True)
+                if state["status"] in ACTIVE_STATUSES:
+                    raise TaskError(
+                        f"任务已经在运行，PID={state.get('runner_pid')}"
+                    )
+                self.store.clear_controls(task_id)
+                state = self.store.default_state(task_id)
+                state.update(
+                    {
+                        "status": "starting",
+                        "phase": "正在启动工作进程",
+                        "started_at": now_iso(),
+                        "ended_at": None,
+                    }
+                )
+                self.store.write_state(task_id, state)
+                return state
 
     def _worker_command(self, task_id: str) -> list[str]:
         if getattr(sys, "frozen", False):

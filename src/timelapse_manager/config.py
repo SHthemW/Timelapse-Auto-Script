@@ -40,6 +40,7 @@ DEFAULT_PROJECT_CONFIG: dict[str, Any] = {
         "startup_probe_seconds": 2,
         "stop_timeout_seconds": 10,
         "retry_delay_seconds": 300,
+        "task_history_retention_days": 30,
     },
     "eternal": {
         "batch_groups": 2000,
@@ -99,6 +100,7 @@ def validate_project_config(data: dict[str, Any]) -> None:
     _number(runtime, "startup_probe_seconds", 0)
     _number(runtime, "stop_timeout_seconds", 0.1)
     _number(runtime, "retry_delay_seconds", 0)
+    _number(runtime, "task_history_retention_days", 1, integer=True)
 
     eternal = data.get("eternal")
     if not isinstance(eternal, dict):

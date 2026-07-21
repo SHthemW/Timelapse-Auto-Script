@@ -24,8 +24,16 @@ from timelapse_manager.io_utils import (
     save_yaml,
     yaml_text,
 )
-from timelapse_manager.presets import BASE_TASK, create_preset, validate_task
+from timelapse_manager.presets import (
+    LEGACY_SCHEDULED_PRESETS,
+    normalize_task,
+    validate_task,
+)
 from timelapse_manager.process_utils import process_matches
+from timelapse_manager.task_factory import (
+    create_task_definition,
+    migrate_legacy_scheduled,
+)
 
 
 TASK_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$")
@@ -72,17 +80,24 @@ class TaskStore:
         self, name: str, preset: str, task_id: str | None = None
     ) -> dict[str, Any]:
         self.ensure()
-        generated = (
-            task_id or f"{_slug(preset)}-{int(time.time())}-{uuid.uuid4().hex[:4]}"
-        )
+        generated = task_id or self.generate_id(preset)
+        task = create_task_definition(self.config, generated, name, preset)
+        self.add_definition(task)
+        return task
+
+    @staticmethod
+    def generate_id(prefix: str) -> str:
+        return f"{_slug(prefix)}-{int(time.time())}-{uuid.uuid4().hex[:4]}"
+
+    def add_definition(self, task: dict[str, Any]) -> None:
+        generated = str(task.get("id", ""))
         self.validate_id(generated)
         path = self.definition_path(generated)
         if path.exists():
             raise TaskError(f"任务已存在: {generated}")
-        task = create_preset(generated, name, preset)
+        validate_task(normalize_task(task))
         save_yaml(path, task)
         self.write_state(generated, self.default_state(generated))
-        return task
 
     def list_definitions(self) -> list[dict[str, Any]]:
         self.ensure()
@@ -104,9 +119,14 @@ class TaskStore:
 
     def _load_path(self, path: Path) -> dict[str, Any]:
         raw = load_yaml(path)
-        task = deep_merge(BASE_TASK, raw)
-        if task.get("id") != path.stem:
+        if raw.get("id") != path.stem:
             raise TaskError(f"任务文件名与 id 不一致: {path.name}")
+        if raw.get("preset") in LEGACY_SCHEDULED_PRESETS:
+            state = self.read_state(path.stem, reconcile=True)
+            if state["status"] not in ACTIVE_STATUSES:
+                raw = migrate_legacy_scheduled(self.config, raw)
+                save_yaml(path, raw)
+        task = normalize_task(raw)
         validate_task(task)
         return task
 
@@ -122,6 +142,7 @@ class TaskStore:
         path = self.definition_path(task_id)
         if not path.exists():
             raise TaskError(f"任务不存在: {task_id}")
+        self.load(task_id)
         return path.read_text(encoding="utf-8")
 
     def save_text(self, task_id: str, text: str) -> dict[str, Any]:
@@ -131,10 +152,37 @@ class TaskStore:
         parsed = parse_yaml(text, "任务 YAML")
         if parsed.get("id") != task_id:
             raise TaskError("任务 YAML 中的 id 不能修改")
-        merged = deep_merge(BASE_TASK, parsed)
+        current = self.load(task_id)
+        merged = normalize_task(parsed)
         validate_task(merged)
+        self._validate_chain_identity(current, merged)
         save_yaml(self.definition_path(task_id), parsed)
         return merged
+
+    @staticmethod
+    def _validate_chain_identity(
+        current: dict[str, Any], replacement: dict[str, Any]
+    ) -> None:
+        current_meta = current.get("continuation")
+        replacement_meta = replacement.get("continuation")
+        if bool(current_meta) != bool(replacement_meta):
+            raise TaskError("任务 continuation 链身份不能添加或删除")
+        if not current_meta:
+            return
+        immutable = {
+            "chain_id",
+            "chain_name",
+            "sequence",
+            "source_preset",
+            "previous_task_id",
+        }
+        changed = [
+            key
+            for key in immutable
+            if current_meta.get(key) != replacement_meta.get(key)
+        ]
+        if changed:
+            raise TaskError("任务链身份字段不能修改: " + ", ".join(sorted(changed)))
 
     def normalized_text(self, task_id: str) -> str:
         return yaml_text(self.load(task_id))

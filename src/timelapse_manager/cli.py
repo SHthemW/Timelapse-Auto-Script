@@ -14,10 +14,9 @@ import yaml
 from timelapse_manager import __version__
 from timelapse_manager.diagnostics import run_self_test
 from timelapse_manager.errors import ConfigError, TimelapseError
-from timelapse_manager.io_utils import load_yaml, save_yaml, yaml_text
+from timelapse_manager.io_utils import load_yaml, now_iso, save_yaml, yaml_text
 from timelapse_manager.presets import PRESET_DESCRIPTIONS
 from timelapse_manager.service import ManagerService
-from timelapse_manager.task_store import ACTIVE_STATUSES
 from timelapse_manager.worker import run_worker
 
 
@@ -165,13 +164,21 @@ def _print_table(headers: list[str], rows: list[list[Any]]) -> None:
 
 
 def _foreground_start(service: ManagerService, task_id: str) -> int:
-    service.validate_task_start(task_id)
-    with service.store.start_lock(task_id):
-        state = service.store.read_state(task_id, reconcile=True)
-        if state["status"] in ACTIVE_STATUSES:
-            raise TimelapseError(f"任务已经在运行，PID={state.get('runner_pid')}")
-        service.store.clear_controls(task_id)
-    return run_worker(task_id, service.paths.root, console=True)
+    service.prepare_foreground_task(task_id)
+    code = run_worker(task_id, service.paths.root, console=True)
+    state = service.store.read_state(task_id, reconcile=True)
+    if state["status"] == "starting" and state.get("runner_pid") is None:
+        state.update(
+            {
+                "status": "failed",
+                "phase": "工作进程初始化失败",
+                "message": "前台工作进程未能初始化",
+                "ended_at": now_iso(),
+                "exit_code": code,
+            }
+        )
+        service.store.write_state(task_id, state)
+    return code
 
 
 def _tail(path: Path, lines: int) -> str:

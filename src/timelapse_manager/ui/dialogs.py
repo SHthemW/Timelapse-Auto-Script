@@ -14,6 +14,7 @@ from timelapse_manager.ui.theme import (
     BACKGROUND,
     BORDER,
     FONT_FAMILY,
+    MONOSPACE_FONT_FAMILY,
     MUTED,
     SURFACE,
     SURFACE_ALT,
@@ -90,7 +91,7 @@ class YamlEditorDialog(ctk.CTkToplevel):
             border_width=0,
             fg_color=SURFACE_ALT,
             text_color=TEXT,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=MONOSPACE_FONT_FAMILY, size=12),
             undo=True,
         )
         self.text.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)

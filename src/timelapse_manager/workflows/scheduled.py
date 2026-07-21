@@ -1,4 +1,4 @@
-"""Scheduled-once, scheduled-loop, and manual workflows."""
+"""Finite Manual capture workflow."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from pathlib import Path
 from timelapse_manager.errors import ConfigError, TaskError
 from timelapse_manager.maintenance import check_disk_space, cleanup_work_directory
 from timelapse_manager.runtime import HardStopRequested, TaskRuntime
-from timelapse_manager.schedule import select_next_slot
 
 
 @dataclass(frozen=True)
@@ -30,67 +29,33 @@ class ScheduledWorkflow:
         self.project = runtime.project
 
     def run(self) -> None:
-        preset = self.task["preset"]
-        loop = preset == "scheduled_loop"
-        while True:
-            spec = self._work_spec()
-            success = self._run_once(spec)
-            if self.runtime.hard_stop.is_set():
-                raise HardStopRequested
-            if not loop or self.runtime.finish_after_current.is_set():
-                if not success:
-                    raise TaskError("本轮任务失败，请查看任务日志")
-                return
-            if success:
-                self.runtime.set_phase("本轮完成", "准备选择下一个清晨或黄昏任务")
-                continue
-            if not self.task["retry"].get("enabled", True):
-                raise TaskError("本轮任务失败，且任务未启用重试")
-            delay = self.task["retry"].get("delay_seconds")
-            if delay is None:
-                delay = self.project["runtime"]["retry_delay_seconds"]
-            self.runtime.set_phase("等待重试", f"{delay:g} 秒后重试")
-            if not self.runtime.sleep(float(delay), stop_on_finish=True):
-                if self.runtime.hard_stop.is_set():
-                    raise HardStopRequested
-                return
+        spec = self._work_spec()
+        if not self._run_once(spec):
+            raise TaskError("任务失败，请查看任务日志")
 
     def _work_spec(self) -> WorkSpec:
-        if self.task["preset"] == "manual":
-            capture = self.task["capture"]
-            work_dir = self.runtime.paths.resolve_from_root(str(capture["work_dir"]))
-            try:
-                start = datetime.fromisoformat(
-                    f"{capture['start_date']}T{capture['start_at']}"
-                )
-                end = datetime.fromisoformat(
-                    f"{capture['end_date']}T{capture['end_at']}"
-                )
-            except (TypeError, ValueError) as exc:
-                raise ConfigError(
-                    "手动任务日期必须是 YYYY-MM-DD，时间必须是 HH:MM"
-                ) from exc
-            if start >= end:
-                raise ConfigError("手动任务结束日期时间必须晚于开始日期时间")
-            return WorkSpec(
-                "手动",
-                work_dir,
-                str(capture["start_date"]),
-                str(capture["start_at"]),
-                str(capture["end_date"]),
-                str(capture["end_at"]),
+        capture = self.task["capture"]
+        work_dir = self.runtime.paths.resolve_from_root(str(capture["work_dir"]))
+        try:
+            start = datetime.fromisoformat(
+                f"{capture['start_date']}T{capture['start_at']}"
             )
-        slot = select_next_slot(self.project["morning"], self.project["dusk"])
-        work_dir = (
-            self.runtime.auto_root / slot.work_date.isoformat() / slot.directory_name
-        )
+            end = datetime.fromisoformat(
+                f"{capture['end_date']}T{capture['end_at']}"
+            )
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(
+                "手动任务日期必须是 YYYY-MM-DD，时间必须是 HH:MM"
+            ) from exc
+        if start >= end:
+            raise ConfigError("手动任务结束日期时间必须晚于开始日期时间")
         return WorkSpec(
-            slot.label,
+            "手动",
             work_dir,
-            slot.work_date.isoformat(),
-            slot.start_at,
-            slot.work_date.isoformat(),
-            slot.end_at,
+            str(capture["start_date"]),
+            str(capture["start_at"]),
+            str(capture["end_date"]),
+            str(capture["end_at"]),
         )
 
     def _camera_output_handler(self, spec: WorkSpec):

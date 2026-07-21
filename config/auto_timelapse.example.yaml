@@ -26,6 +26,7 @@ runtime:
   startup_probe_seconds: 2
   stop_timeout_seconds: 10
   retry_delay_seconds: 300
+  task_history_retention_days: 30
 
 eternal:
   batch_groups: 2000
