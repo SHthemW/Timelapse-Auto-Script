@@ -14,8 +14,16 @@ python_version_ready() {
     "$1" -c 'import sys; assert sys.version_info >= (3, 10)' >/dev/null 2>&1
 }
 
-runtime_dependencies_ready() {
-    "$1" -c 'import customtkinter, yaml, psutil, PIL' >/dev/null 2>&1
+find_homebrew() {
+    if command -v brew >/dev/null 2>&1; then
+        command -v brew
+    elif [ -x "/opt/homebrew/bin/brew" ]; then
+        printf '%s\n' "/opt/homebrew/bin/brew"
+    elif [ -x "/usr/local/bin/brew" ]; then
+        printf '%s\n' "/usr/local/bin/brew"
+    else
+        return 1
+    fi
 }
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
@@ -31,6 +39,12 @@ fi
 if [ ! -f "./timelapse.py" ]; then
     echo "Timelapse Manager launcher was not found in:"
     pwd
+    pause_and_fail
+fi
+
+RUNTIME_CHECKER="./src/timelapse_manager/runtime_check.py"
+if [ ! -f "$RUNTIME_CHECKER" ]; then
+    echo "GUI runtime checker was not found: ${RUNTIME_CHECKER}"
     pause_and_fail
 fi
 
@@ -92,7 +106,7 @@ fi
 echo "Using ${GUI_ENVIRONMENT}"
 echo "Python: ${GUI_PYTHON}"
 
-if ! runtime_dependencies_ready "$GUI_PYTHON"; then
+if ! "$GUI_PYTHON" "$RUNTIME_CHECKER" packages; then
     if [ ! -f "./requirements.txt" ]; then
         echo "requirements.txt was not found."
         pause_and_fail
@@ -102,6 +116,43 @@ if ! runtime_dependencies_ready "$GUI_PYTHON"; then
         echo "Failed to install runtime dependencies."
         pause_and_fail
     fi
+    if ! "$GUI_PYTHON" "$RUNTIME_CHECKER" packages; then
+        echo "Runtime dependencies are still unavailable after installation."
+        pause_and_fail
+    fi
+fi
+
+if ! "$GUI_PYTHON" "$RUNTIME_CHECKER" tkinter; then
+    echo "The selected Python does not include a working Tkinter runtime."
+    TK_FORMULA=$(
+        "$GUI_PYTHON" "$RUNTIME_CHECKER" homebrew-formula 2>/dev/null
+    ) || TK_FORMULA=""
+    HOMEBREW_COMMAND=$(find_homebrew) || HOMEBREW_COMMAND=""
+
+    if [ -n "$TK_FORMULA" ] && [ -n "$HOMEBREW_COMMAND" ]; then
+        echo "Installing missing Homebrew Tk support: ${TK_FORMULA}"
+        if ! "$HOMEBREW_COMMAND" install "$TK_FORMULA"; then
+            echo "Homebrew could not install ${TK_FORMULA}."
+            echo "Run this command manually, then start the application again:"
+            echo "${HOMEBREW_COMMAND} install ${TK_FORMULA}"
+            pause_and_fail
+        fi
+    fi
+
+    if ! "$GUI_PYTHON" "$RUNTIME_CHECKER" tkinter; then
+        if [ -n "$TK_FORMULA" ]; then
+            echo "Tkinter is still unavailable. Install or repair it with:"
+            echo "brew install ${TK_FORMULA}"
+        else
+            echo "Install a Python build that includes Tcl/Tk, then recreate the virtual environment."
+        fi
+        pause_and_fail
+    fi
+fi
+
+if ! "$GUI_PYTHON" "$RUNTIME_CHECKER" runtime; then
+    echo "The GUI runtime could not be imported after dependency checks."
+    pause_and_fail
 fi
 
 exec "$GUI_PYTHON" "./timelapse.py" gui

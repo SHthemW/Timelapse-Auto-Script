@@ -14,6 +14,13 @@ if not exist "timelapse.py" (
     goto failed
 )
 
+set "RUNTIME_CHECKER=%CD%\src\timelapse_manager\runtime_check.py"
+if not exist "%RUNTIME_CHECKER%" (
+    echo GUI runtime checker was not found:
+    echo %RUNTIME_CHECKER%
+    goto failed
+)
+
 set "GUI_PYTHON="
 set "GUI_ENVIRONMENT="
 
@@ -79,7 +86,7 @@ if errorlevel 1 (
 echo Using %GUI_ENVIRONMENT%
 echo Python: %GUI_PYTHON%
 
-"%GUI_PYTHON%" -c "import customtkinter, yaml, psutil, PIL" >nul 2>&1
+"%GUI_PYTHON%" "%RUNTIME_CHECKER%" packages >nul 2>&1
 if errorlevel 1 (
     if not exist "requirements.txt" (
         echo requirements.txt was not found.
@@ -91,6 +98,24 @@ if errorlevel 1 (
         echo Failed to install runtime dependencies.
         goto failed
     )
+    "%GUI_PYTHON%" "%RUNTIME_CHECKER%" packages >nul 2>&1
+    if errorlevel 1 (
+        echo Runtime dependencies are still unavailable after installation.
+        goto failed
+    )
+)
+
+"%GUI_PYTHON%" "%RUNTIME_CHECKER%" tkinter >nul 2>&1
+if errorlevel 1 (
+    echo The selected Python does not include a working Tkinter runtime.
+    echo Re-run the Python installer, enable "tcl/tk and IDLE", then recreate the virtual environment.
+    goto failed
+)
+
+"%GUI_PYTHON%" "%RUNTIME_CHECKER%" runtime >nul 2>&1
+if errorlevel 1 (
+    echo The GUI runtime could not be imported after dependency checks.
+    goto failed
 )
 
 "%GUI_PYTHON%" timelapse.py gui
