@@ -101,8 +101,8 @@ def apply_table_style(root: object) -> None:
         darkcolor=background,
         borderwidth=0,
         relief="flat",
-        rowheight=36,
-        font=(FONT_FAMILY, 10),
+        rowheight=42,
+        font=(FONT_FAMILY, 12),
     )
     style.configure(
         "Modern.Treeview.Heading",
@@ -112,8 +112,8 @@ def apply_table_style(root: object) -> None:
         lightcolor=heading,
         darkcolor=heading,
         relief="flat",
-        padding=(10, 8),
-        font=(FONT_FAMILY, 10, "bold"),
+        padding=(8, 9),
+        font=(FONT_FAMILY, 11, "bold"),
     )
     style.map(
         "Modern.Treeview",

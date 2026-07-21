@@ -99,12 +99,13 @@ class ModernTable(ctk.CTkFrame):
             style="Modern.Treeview",
         )
         for column in column_names:
-            self.tree.heading(column, text=headings[column])
+            self.tree.heading(column, text=headings[column], anchor="w")
             self.tree.column(
                 column,
                 width=widths[column],
                 minwidth=70,
                 stretch=column in stretch_columns,
+                anchor="w",
             )
 
         vertical = ctk.CTkScrollbar(
