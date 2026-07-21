@@ -110,13 +110,14 @@ def _check_subprocess() -> str:
 
 
 def _check_gui_import() -> str:
+    import customtkinter
     import tkinter
 
     interpreter = tkinter.Tcl()
     interpreter.eval("info patchlevel")
     from timelapse_manager import gui  # noqa: F401
 
-    return f"Tk {tkinter.TkVersion}"
+    return f"CustomTkinter {customtkinter.__version__} / Tk {tkinter.TkVersion}"
 
 
 def _check_tasks(service: ManagerService) -> str:

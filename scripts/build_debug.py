@@ -43,6 +43,8 @@ def build() -> Path:
         "--console",
         "--name",
         name,
+        "--collect-all",
+        "customtkinter",
         "--paths",
         str(ROOT / "src"),
         "--distpath",
@@ -64,6 +66,15 @@ def build() -> Path:
     shutil.copy2(ROOT / "config" / "webhook.example.yaml", config_dir)
     shutil.copy2(ROOT / "README.md", application_dir)
     shutil.copy2(ROOT / "requirements.txt", application_dir)
+    launcher_name = {
+        "win": "start_gui.bat",
+        "mac": "start_gui.command",
+    }.get(tag)
+    if launcher_name:
+        launcher = application_dir / launcher_name
+        shutil.copy2(ROOT / launcher_name, launcher)
+        if tag == "mac":
+            launcher.chmod(launcher.stat().st_mode | 0o111)
 
     timestamp = datetime.now().strftime("%y%m%d-%H%M%S")
     archive_dir = ROOT / "bin" / "Debug-Archives"

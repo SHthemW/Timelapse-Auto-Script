@@ -172,10 +172,32 @@ class TaskStore:
             state = default
         state = deep_merge(default, state)
         if reconcile and state["status"] in ACTIVE_STATUSES:
+            if state["status"] == "starting" and state.get("runner_pid") is None:
+                return state
             if not process_matches(
                 state.get("runner_pid"), state.get("runner_created_at")
             ):
-                state.update(
+                state = self._reconcile_missing_runner(task_id)
+        return state
+
+    def _reconcile_missing_runner(self, task_id: str) -> dict[str, Any]:
+        """Confirm a dead runner without overwriting a newer terminal state."""
+        default = self.default_state(task_id)
+        with self._write_lock:
+            with self._state_file_lock(task_id):
+                latest = load_json(self.state_path(task_id), default)
+                if not isinstance(latest, dict):
+                    latest = default
+                latest = deep_merge(default, latest)
+                if latest["status"] not in ACTIVE_STATUSES:
+                    return latest
+                if latest["status"] == "starting" and latest.get("runner_pid") is None:
+                    return latest
+                if process_matches(
+                    latest.get("runner_pid"), latest.get("runner_created_at")
+                ):
+                    return latest
+                latest.update(
                     {
                         "status": "failed",
                         "phase": "工作进程异常退出",
@@ -186,8 +208,8 @@ class TaskStore:
                         "updated_at": now_iso(),
                     }
                 )
-                self.write_state(task_id, state)
-        return state
+                save_json(self.state_path(task_id), latest)
+                return latest
 
     def write_state(self, task_id: str, state: dict[str, Any]) -> None:
         self.ensure()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from timelapse_manager.config import ConfigManager
 from timelapse_manager.errors import ConfigError
@@ -47,6 +48,41 @@ class ConfigAndStoreTests(unittest.TestCase):
             task = store.create(preset, preset)
             self.assertEqual(store.load(task["id"])["preset"], preset)
         self.assertEqual(len(store.list_definitions()), len(PRESET_DESCRIPTIONS))
+
+    def test_reconcile_does_not_overwrite_newer_terminal_state(self) -> None:
+        store = TaskStore(self.manager.load())
+        task = store.create("竞态回归测试", "scheduled_once")
+        active = store.default_state(task["id"])
+        active.update(
+            {
+                "status": "running",
+                "runner_pid": 12345,
+                "runner_created_at": 67890.0,
+            }
+        )
+        store.write_state(task["id"], active)
+
+        def finish_while_reconciling(*_args: object) -> bool:
+            terminal = store.read_state(task["id"])
+            terminal.update(
+                {
+                    "status": "completed",
+                    "phase": "任务已完成",
+                    "runner_pid": None,
+                    "runner_created_at": None,
+                }
+            )
+            store.write_state(task["id"], terminal)
+            return False
+
+        with patch(
+            "timelapse_manager.task_store.process_matches",
+            side_effect=finish_while_reconciling,
+        ):
+            reconciled = store.read_state(task["id"], reconcile=True)
+
+        self.assertEqual(reconciled["status"], "completed")
+        self.assertEqual(store.read_state(task["id"])["status"], "completed")
 
 
 if __name__ == "__main__":
