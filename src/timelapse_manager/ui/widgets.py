@@ -103,7 +103,7 @@ class ModernTable(ctk.CTkFrame):
             self.tree.column(
                 column,
                 width=widths[column],
-                minwidth=70,
+                minwidth=56,
                 stretch=column in stretch_columns,
                 anchor="w",
             )
