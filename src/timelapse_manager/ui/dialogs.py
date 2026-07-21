@@ -14,7 +14,6 @@ from timelapse_manager.ui.theme import (
     BACKGROUND,
     BORDER,
     FONT_FAMILY,
-    MONO_FONT_FAMILY,
     MUTED,
     SURFACE,
     SURFACE_ALT,
@@ -91,7 +90,7 @@ class YamlEditorDialog(ctk.CTkToplevel):
             border_width=0,
             fg_color=SURFACE_ALT,
             text_color=TEXT,
-            font=ctk.CTkFont(family=MONO_FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             undo=True,
         )
         self.text.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
@@ -111,6 +110,7 @@ class YamlEditorDialog(ctk.CTkToplevel):
             command=self.save,
             width=124,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).grid(row=0, column=3, padx=(8, 0))
 
         self.bind("<Control-s>", lambda _event: self.save())
@@ -195,6 +195,7 @@ class NewTaskDialog(ctk.CTkToplevel):
             corner_radius=9,
             border_color=BORDER,
             fg_color=SURFACE_ALT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         )
         self.name_entry.grid(row=1, column=0, sticky="ew", padx=18)
         ctk.CTkLabel(
@@ -213,6 +214,8 @@ class NewTaskDialog(ctk.CTkToplevel):
             corner_radius=9,
             fg_color=ACCENT,
             button_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).grid(row=3, column=0, sticky="ew", padx=18)
         self.description = ctk.CTkLabel(
             form,
@@ -241,6 +244,7 @@ class NewTaskDialog(ctk.CTkToplevel):
             command=self._submit,
             width=112,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).pack(side=tk.LEFT, padx=(10, 0))
 
         self.bind("<Return>", lambda _event: self._submit())

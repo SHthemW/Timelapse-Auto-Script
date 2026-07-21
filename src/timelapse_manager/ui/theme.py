@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
+import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import ttk
 
 import customtkinter as ctk
@@ -34,21 +36,41 @@ def platform_font_family() -> str:
     return "Noto Sans CJK SC"
 
 
-def monospace_font_family() -> str:
+def platform_monospace_font_family() -> str:
     if sys.platform == "darwin":
         return "Menlo"
     if os.name == "nt":
-        return "Cascadia Mono"
+        return "Consolas"
     return "DejaVu Sans Mono"
 
 
 FONT_FAMILY = platform_font_family()
-MONO_FONT_FAMILY = monospace_font_family()
+MONOSPACE_FONT_FAMILY = platform_monospace_font_family()
 
 
 def apply_base_theme() -> None:
     ctk.set_default_color_theme("blue")
     ctk.set_appearance_mode("System")
+
+
+def apply_font_defaults(root: tk.Misc) -> None:
+    """Use one platform font family for every Tk and CustomTkinter fallback."""
+    root.option_add("*Font", f"{{{FONT_FAMILY}}} 10")
+    for name in (
+        "TkDefaultFont",
+        "TkTextFont",
+        "TkFixedFont",
+        "TkMenuFont",
+        "TkHeadingFont",
+        "TkCaptionFont",
+        "TkSmallCaptionFont",
+        "TkIconFont",
+        "TkTooltipFont",
+    ):
+        try:
+            tkfont.nametofont(name, root=root).configure(family=FONT_FAMILY)
+        except tk.TclError:
+            continue
 
 
 def resolved(color: Color) -> str:

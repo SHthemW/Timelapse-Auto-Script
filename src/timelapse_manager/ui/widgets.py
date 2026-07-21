@@ -151,7 +151,13 @@ def action_button(
     width: int = 92,
 ) -> ctk.CTkButton:
     if primary:
-        return ctk.CTkButton(parent, text=text, command=command, width=width)
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            command=command,
+            width=width,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+        )
     if danger:
         return ctk.CTkButton(
             parent,
@@ -163,6 +169,7 @@ def action_button(
             text_color=("#B42318", "#FF9A9A"),
             border_width=1,
             border_color=("#F3B9B5", "#743742"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         )
     return ctk.CTkButton(
         parent,
@@ -174,4 +181,5 @@ def action_button(
         text_color=TEXT,
         border_width=1,
         border_color=BORDER,
+        font=ctk.CTkFont(family=FONT_FAMILY, size=12),
     )

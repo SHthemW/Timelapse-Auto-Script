@@ -24,7 +24,7 @@ from timelapse_manager.ui.theme import (
     BORDER,
     DANGER,
     FONT_FAMILY,
-    MONO_FONT_FAMILY,
+    MONOSPACE_FONT_FAMILY,
     MUTED,
     SIDEBAR,
     SUCCESS,
@@ -32,6 +32,7 @@ from timelapse_manager.ui.theme import (
     SURFACE_ALT,
     TEXT,
     WARNING,
+    apply_font_defaults,
     apply_status_tags,
     apply_table_style,
 )
@@ -77,6 +78,7 @@ class TimelapseApp:
         self.root.minsize(1180, 720)
         self.root.configure(fg_color=BACKGROUND)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
+        apply_font_defaults(self.root)
 
         self._closed = False
         self._busy = 0
@@ -225,6 +227,7 @@ class TimelapseApp:
             button_hover_color=ACCENT,
             text_color=TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=11),
         ).grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
 
     def _build_header(self) -> None:
@@ -276,6 +279,7 @@ class TimelapseApp:
             height=38,
             corner_radius=10,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         )
         self.refresh_button.grid(row=0, column=2, rowspan=2, sticky="e")
 
@@ -296,7 +300,7 @@ class TimelapseApp:
             text="●",
             text_color=SUCCESS,
             width=26,
-            font=ctk.CTkFont(size=10),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
         )
         self.status_dot.grid(row=0, column=0, padx=(20, 0))
         ctk.CTkLabel(
@@ -354,6 +358,7 @@ class TimelapseApp:
             height=34,
             corner_radius=9,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).grid(row=0, column=1, sticky="e")
 
         self.overview_table = ModernTable(
@@ -411,6 +416,7 @@ class TimelapseApp:
             height=34,
             corner_radius=9,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).grid(row=0, column=1, sticky="e", padx=14, pady=(10, 4))
 
         actions = ctk.CTkFrame(toolbar, fg_color="transparent")
@@ -553,6 +559,7 @@ class TimelapseApp:
             text_color=TEXT,
             corner_radius=9,
             height=34,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         )
         self.config_selector.grid(row=0, column=0, padx=14, pady=12)
         self.config_selector.set("项目配置")
@@ -582,7 +589,7 @@ class TimelapseApp:
             border_width=0,
             fg_color=SURFACE_ALT,
             text_color=TEXT,
-            font=ctk.CTkFont(family=MONO_FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=MONOSPACE_FONT_FAMILY, size=12),
             undo=True,
         )
         self.config_text.grid(row=0, column=0, sticky="nsew", padx=9, pady=(9, 4))
@@ -606,6 +613,7 @@ class TimelapseApp:
             command=self.save_config,
             width=120,
             fg_color=ACCENT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         ).grid(row=0, column=3, sticky="e")
         self._update_config_path()
 
@@ -641,6 +649,8 @@ class TimelapseApp:
             button_color=ACCENT,
             button_hover_color=ACCENT,
             text_color=TEXT,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12),
         )
         self.log_task_box.grid(row=0, column=1, sticky="ew", pady=12)
         action_button(toolbar, "刷新日志", self.refresh_log, width=96).grid(
@@ -671,7 +681,7 @@ class TimelapseApp:
             border_width=0,
             fg_color=SURFACE_ALT,
             text_color=TEXT,
-            font=ctk.CTkFont(family=MONO_FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
         )
         self.log_text.grid(row=0, column=0, sticky="nsew", padx=9, pady=9)
 
