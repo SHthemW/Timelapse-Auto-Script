@@ -95,7 +95,9 @@ macOS 可以双击：
 start_gui.command
 ```
 
-源码目录中的快速启动脚本会优先使用 `.venv`、其次使用 `venv`，最后使用系统 Python。debug 包中的脚本会直接启动同目录的 `TimelapseManager` 可执行文件。若从某些归档工具解压后 macOS 丢失执行权限，可运行 `chmod +x start_gui.command` 恢复。
+源码目录中的快速启动脚本会依次选择当前已激活的虚拟环境、`.venv` 和 `venv`。选中的环境缺少运行依赖时，脚本会从 `requirements.txt` 安装到该虚拟环境；没有可用虚拟环境时，会使用 Python 3.10 或更高版本自动创建 `.venv`。脚本直接调用虚拟环境中的 Python，不需要先手动执行 `activate`。
+
+debug 包中的脚本会直接启动同目录的 `TimelapseManager` 可执行文件，不会额外创建虚拟环境。若从某些归档工具解压后 macOS 丢失执行权限，可运行 `chmod +x start_gui.command` 恢复。
 
 ## CLI 管理
 

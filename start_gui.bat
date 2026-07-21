@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 
 pushd "%~dp0" >nul || exit /b 1
 
@@ -14,51 +14,93 @@ if not exist "timelapse.py" (
     goto failed
 )
 
+set "GUI_PYTHON="
+set "GUI_ENVIRONMENT="
+
+if defined VIRTUAL_ENV if exist "%VIRTUAL_ENV%\Scripts\python.exe" (
+    set "GUI_PYTHON=%VIRTUAL_ENV%\Scripts\python.exe"
+    set "GUI_ENVIRONMENT=active environment %VIRTUAL_ENV%"
+    goto environment_selected
+)
+
 if exist ".venv\Scripts\python.exe" (
-    ".venv\Scripts\python.exe" -c "import sys, customtkinter, yaml, psutil, PIL; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
-    if not errorlevel 1 (
-        ".venv\Scripts\python.exe" timelapse.py gui
-        goto finished
-    )
+    set "GUI_PYTHON=%CD%\.venv\Scripts\python.exe"
+    set "GUI_ENVIRONMENT=project environment .venv"
+    goto environment_selected
 )
 
 if exist "venv\Scripts\python.exe" (
-    "venv\Scripts\python.exe" -c "import sys, customtkinter, yaml, psutil, PIL; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
-    if not errorlevel 1 (
-        "venv\Scripts\python.exe" timelapse.py gui
-        goto finished
-    )
+    set "GUI_PYTHON=%CD%\venv\Scripts\python.exe"
+    set "GUI_ENVIRONMENT=project environment venv"
+    goto environment_selected
 )
 
+set "BOOTSTRAP_PYTHON="
 where py >nul 2>&1
 if not errorlevel 1 (
-    py -3 -c "import sys, customtkinter, yaml, psutil, PIL; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
+    py -3 -c "import sys; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
+    if not errorlevel 1 set "BOOTSTRAP_PYTHON=py"
+)
+
+if not defined BOOTSTRAP_PYTHON (
+    where python >nul 2>&1
     if not errorlevel 1 (
-        py -3 timelapse.py gui
-        goto finished
+        python -c "import sys; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
+        if not errorlevel 1 set "BOOTSTRAP_PYTHON=python"
     )
 )
 
-where python >nul 2>&1
-if not errorlevel 1 (
-    python -c "import sys, customtkinter, yaml, psutil, PIL; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
-    if not errorlevel 1 (
-        python timelapse.py gui
-        goto finished
+if not defined BOOTSTRAP_PYTHON (
+    echo Python 3.10 or newer was not found.
+    goto failed
+)
+
+echo Creating project virtual environment: %CD%\.venv
+if "%BOOTSTRAP_PYTHON%"=="py" (
+    py -3 -m venv ".venv"
+) else (
+    python -m venv ".venv"
+)
+if errorlevel 1 (
+    echo Failed to create the project virtual environment.
+    goto failed
+)
+set "GUI_PYTHON=%CD%\.venv\Scripts\python.exe"
+set "GUI_ENVIRONMENT=new project environment .venv"
+
+:environment_selected
+"%GUI_PYTHON%" -c "import sys; assert sys.version_info.__ge__((3, 10))" >nul 2>&1
+if errorlevel 1 (
+    echo The selected virtual environment does not contain Python 3.10 or newer:
+    echo %GUI_PYTHON%
+    goto failed
+)
+
+echo Using %GUI_ENVIRONMENT%
+echo Python: %GUI_PYTHON%
+
+"%GUI_PYTHON%" -c "import customtkinter, yaml, psutil, PIL" >nul 2>&1
+if errorlevel 1 (
+    if not exist "requirements.txt" (
+        echo requirements.txt was not found.
+        goto failed
+    )
+    echo Installing missing runtime dependencies into the virtual environment...
+    "%GUI_PYTHON%" -m pip install --disable-pip-version-check -r "requirements.txt"
+    if errorlevel 1 (
+        echo Failed to install runtime dependencies.
+        goto failed
     )
 )
 
-echo No ready Python environment was found.
-echo Install Python 3.10 or newer, then run:
-echo python -m pip install -r requirements.txt
-goto failed
+"%GUI_PYTHON%" timelapse.py gui
+goto finished
 
 :finished
 set "LAUNCH_EXIT_CODE=%ERRORLEVEL%"
 if not "%LAUNCH_EXIT_CODE%"=="0" (
     echo.
     echo Timelapse Manager exited with code %LAUNCH_EXIT_CODE%.
-    echo Install dependencies with: python -m pip install -r requirements.txt
     pause
 )
 popd >nul
