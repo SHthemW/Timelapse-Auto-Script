@@ -378,14 +378,13 @@ class TimelapseApp:
                 "started": "启动时间",
             },
             {
-                "name": 160,
-                "preset": 64,
-                "status": 68,
-                "phase": 220,
-                "pid": 60,
-                "started": 165,
+                "name": 260,
+                "preset": 70,
+                "status": 70,
+                "phase": 180,
+                "pid": 70,
+                "started": 210,
             },
-            stretch=("name", "phase"),
         )
         self.overview_table.grid(row=2, column=0, sticky="nsew")
         self.overview_table.tree.bind(
@@ -464,15 +463,14 @@ class TimelapseApp:
                 "started": "启动时间",
             },
             {
-                "id": 170,
-                "name": 140,
-                "preset": 64,
-                "status": 68,
-                "phase": 190,
-                "pid": 60,
-                "started": 165,
+                "id": 230,
+                "name": 220,
+                "preset": 70,
+                "status": 70,
+                "phase": 180,
+                "pid": 70,
+                "started": 210,
             },
-            stretch=("id", "name", "phase"),
         )
         self.task_table.grid(row=1, column=0, sticky="nsew")
         self.task_table.tree.bind("<Double-1>", lambda _event: self.edit_task())
@@ -527,14 +525,13 @@ class TimelapseApp:
                 "command": "命令",
             },
             {
-                "task": 150,
-                "role": 110,
-                "pid": 60,
-                "status": 68,
-                "started": 165,
-                "command": 300,
+                "task": 220,
+                "role": 100,
+                "pid": 70,
+                "status": 70,
+                "started": 210,
+                "command": 320,
             },
-            stretch=("task", "command"),
         )
         self.process_table.grid(row=1, column=0, sticky="nsew")
         self._tables.append(self.process_table)

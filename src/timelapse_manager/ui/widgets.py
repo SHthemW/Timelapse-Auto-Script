@@ -77,8 +77,6 @@ class ModernTable(ctk.CTkFrame):
         columns: Iterable[str],
         headings: dict[str, str],
         widths: dict[str, int],
-        *,
-        stretch: Iterable[str] = (),
     ) -> None:
         super().__init__(
             parent,
@@ -90,7 +88,6 @@ class ModernTable(ctk.CTkFrame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         column_names = tuple(columns)
-        stretch_columns = set(stretch)
         self.tree = ttk.Treeview(
             self,
             columns=column_names,
@@ -99,13 +96,13 @@ class ModernTable(ctk.CTkFrame):
             style="Modern.Treeview",
         )
         for column in column_names:
-            self.tree.heading(column, text=headings[column], anchor="w")
+            self.tree.heading(column, text=headings[column], anchor="center")
             self.tree.column(
                 column,
                 width=widths[column],
                 minwidth=56,
-                stretch=column in stretch_columns,
-                anchor="w",
+                stretch=False,
+                anchor="center",
             )
 
         vertical = ctk.CTkScrollbar(
