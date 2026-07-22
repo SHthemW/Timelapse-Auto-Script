@@ -79,17 +79,18 @@ def _scheduled_progress_label(
 ) -> str:
     total = end - start
     if now < start:
-        return f"{_progress_bar(0)} 0% · 距开始 {_duration_label(start - now)}"
+        return f"距开始 {_duration_label(start - now)}"
     ratio = min(1.0, max(0.0, (now - start) / total))
     percent = round(ratio * 100)
     if ratio >= 1:
         detail = str(state.get("phase") or "拍摄时段已结束")
-    elif state.get("status") == "finishing":
+        return f"{_progress_bar(percent)} {percent}% · {detail}"
+    if state.get("status") == "finishing":
         detail = "正在收尾"
     elif state.get("status") == "stopping":
         detail = "正在停止"
     else:
-        detail = f"{_clock_label(now - start)} / {_clock_label(total)}"
+        return f"{_progress_bar(percent)} {percent}%"
     return f"{_progress_bar(percent)} {percent}% · {detail}"
 
 
@@ -126,9 +127,3 @@ def _duration_label(value: timedelta) -> str:
     minutes = max(0, int(value.total_seconds() // 60))
     hours, minutes = divmod(minutes, 60)
     return f"{hours}小时{minutes:02d}分" if hours else f"{minutes}分"
-
-
-def _clock_label(value: timedelta) -> str:
-    minutes = max(0, int(value.total_seconds() // 60))
-    hours, minutes = divmod(minutes, 60)
-    return f"{hours:02d}:{minutes:02d}"

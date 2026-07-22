@@ -25,8 +25,7 @@ class TaskProgressTests(unittest.TestCase):
             now=datetime(2026, 7, 22, 11, 10),
         )
 
-        self.assertIn("0%", label)
-        self.assertIn("距开始 4小时50分", label)
+        self.assertEqual(label, "距开始 4小时50分")
 
     def test_compact_timestamp_hides_seconds_and_timezone(self) -> None:
         self.assertEqual(
@@ -42,7 +41,7 @@ class TaskProgressTests(unittest.TestCase):
         )
 
         self.assertIn("25%", label)
-        self.assertIn("01:00 / 04:00", label)
+        self.assertNotIn("·", label)
 
     def test_eternal_task_reports_recorded_queue_progress(self) -> None:
         label = task_progress_label(
