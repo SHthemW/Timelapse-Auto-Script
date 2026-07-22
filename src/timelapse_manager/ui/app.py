@@ -759,7 +759,12 @@ class TimelapseApp:
             return
         self.show_page("tasks")
         self.refresh_all(select=task["id"])
-        self.edit_task(task["id"])
+        if preset == "manual":
+            self.edit_task(task["id"])
+        else:
+            self._async_action(
+                "自动启动任务", lambda: self.service.start_task(task["id"])
+            )
 
     def edit_task(self, task_id: str | None = None) -> None:
         target = task_id or self._require_task()

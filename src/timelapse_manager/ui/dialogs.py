@@ -167,7 +167,7 @@ class NewTaskDialog(ctk.CTkToplevel):
         ).grid(row=0, column=0, sticky="ew", padx=28, pady=(28, 4))
         ctk.CTkLabel(
             self,
-            text="选择预设后仍可在任务 YAML 中调整全部参数。",
+            text="定时与永续预设会立即启动，Manual 任务会先进入配置编辑。",
             text_color=MUTED,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             anchor="w",
@@ -234,19 +234,19 @@ class NewTaskDialog(ctk.CTkToplevel):
             padx=18,
             pady=(10, 18),
         )
-        self._update_description()
-
         buttons = ctk.CTkFrame(self, fg_color="transparent")
         buttons.grid(row=3, column=0, sticky="e", padx=28, pady=22)
         action_button(buttons, "取消", self.destroy, width=88).pack(side=tk.LEFT)
-        ctk.CTkButton(
+        self.submit_button = ctk.CTkButton(
             buttons,
-            text="创建任务",
+            text="创建并启动",
             command=self._submit,
-            width=112,
+            width=120,
             fg_color=ACCENT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
-        ).pack(side=tk.LEFT, padx=(10, 0))
+        )
+        self.submit_button.pack(side=tk.LEFT, padx=(10, 0))
+        self._update_description()
 
         self.bind("<Return>", lambda _event: self._submit())
         self.bind("<Escape>", lambda _event: self.destroy())
@@ -258,7 +258,11 @@ class NewTaskDialog(ctk.CTkToplevel):
         self.grab_set()
 
     def _update_description(self) -> None:
-        self.description.configure(text=PRESET_DESCRIPTIONS[self.preset_value.get()])
+        preset = self.preset_value.get()
+        self.description.configure(text=PRESET_DESCRIPTIONS[preset])
+        self.submit_button.configure(
+            text="创建并编辑" if preset == "manual" else "创建并启动"
+        )
 
     def _submit(self) -> None:
         name = self.name_value.get().strip()

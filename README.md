@@ -74,6 +74,8 @@ Start the GUI:
 python timelapse.py gui
 ```
 
+Scheduled and eternal presets created in the GUI start immediately in the background. Manual tasks open the YAML editor first because their required capture fields are not complete yet.
+
 Windows users can open `start_gui.bat`; macOS users can open `start_gui.command`. Source launchers prefer an active virtual environment, then `.venv`, then `venv`, and create `.venv` when necessary. Debug packages launch the bundled executable directly.
 
 ## CLI
