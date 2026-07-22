@@ -18,6 +18,8 @@ import customtkinter as ctk
 from timelapse_manager.service import ManagerService
 from timelapse_manager.task_store import ACTIVE_STATUSES
 from timelapse_manager.ui.dialogs import NewTaskDialog, YamlEditorDialog
+from timelapse_manager.ui.progress import compact_timestamp, task_progress_label
+from timelapse_manager.ui.table import ModernTable
 from timelapse_manager.ui.theme import (
     ACCENT,
     BACKGROUND,
@@ -36,7 +38,7 @@ from timelapse_manager.ui.theme import (
     apply_status_tags,
     apply_table_style,
 )
-from timelapse_manager.ui.widgets import ModernTable, SummaryCard, action_button
+from timelapse_manager.ui.widgets import SummaryCard, action_button
 
 
 PAGE_META = {
@@ -368,12 +370,13 @@ class TimelapseApp:
 
         self.overview_table = ModernTable(
             page,
-            ("name", "preset", "status", "phase", "pid", "started"),
+            ("name", "preset", "status", "phase", "progress", "pid", "started"),
             {
                 "name": "任务名称",
                 "preset": "模式",
                 "status": "状态",
                 "phase": "当前阶段",
+                "progress": "进度",
                 "pid": "工作 PID",
                 "started": "启动时间",
             },
@@ -382,6 +385,7 @@ class TimelapseApp:
                 "preset": 70,
                 "status": 70,
                 "phase": 180,
+                "progress": 280,
                 "pid": 70,
                 "started": 210,
             },
@@ -868,7 +872,12 @@ class TimelapseApp:
                 STATUS_TEXT.get(status, status),
                 state.get("phase", ""),
                 state.get("runner_pid") or "",
-                state.get("started_at") or "",
+                compact_timestamp(state.get("started_at")),
+            )
+            overview_values = (
+                *common_values[:4],
+                task_progress_label(task, state),
+                *common_values[4:],
             )
             self.task_table.tree.insert(
                 "",
@@ -881,7 +890,7 @@ class TimelapseApp:
                 "",
                 tk.END,
                 iid=task_id,
-                values=common_values,
+                values=overview_values,
                 tags=tag,
             )
 
@@ -926,7 +935,7 @@ class TimelapseApp:
                     ),
                     process["pid"],
                     STATUS_TEXT.get(status, status),
-                    process.get("started_at") or "",
+                    compact_timestamp(process.get("started_at")),
                     process.get("command") or "",
                 ),
                 tags=(status,) if status in STATUS_TEXT else (),
