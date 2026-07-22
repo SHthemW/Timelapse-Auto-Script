@@ -47,6 +47,11 @@ PAGE_META = {
     "logs": ("运行日志", "按任务查看最新日志和错误信息"),
 }
 
+
+def build_mode_label() -> str:
+    mode = os.environ.get("TIMELAPSE_MANAGER_BUILD_MODE", "debug").lower()
+    return "Release" if mode == "release" else "Debug"
+
 STATUS_TEXT = {
     "idle": "待启动",
     "starting": "启动中",
@@ -73,7 +78,7 @@ class TimelapseApp:
     def __init__(self, root: ctk.CTk, service: ManagerService) -> None:
         self.root = root
         self.service = service
-        self.root.title("Timelapse Manager - Debug")
+        self.root.title(f"Timelapse Manager - {build_mode_label()}")
         self.root.geometry("1360x860")
         self.root.minsize(1180, 720)
         self.root.configure(fg_color=BACKGROUND)
@@ -166,7 +171,7 @@ class TimelapseApp:
         ).grid(row=0, column=1, sticky="sw", padx=(11, 0))
         ctk.CTkLabel(
             brand,
-            text="Manager · Debug",
+            text=f"Manager · {build_mode_label()}",
             text_color=MUTED,
             font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             anchor="w",

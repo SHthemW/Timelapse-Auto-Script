@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a platform-native debug portable ZIP with a console."""
+"""Build a platform-native Release portable ZIP without a console."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from build_package import build  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
-    archive = build("debug")
+    archive = build("release")
     print(archive)
     return 0
 

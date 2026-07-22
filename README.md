@@ -15,7 +15,7 @@ Tasks continue running after the GUI closes. Reopen the GUI or use the CLI from 
 - Per-task YAML with validation and a monospace editor in the GUI.
 - Light, dark, and system appearance modes.
 - Webhook notifications, image notifications, disk-space warnings, and stale-process reconciliation.
-- Debug portable archives for the current platform.
+- Debug and Release portable archives for the current platform.
 
 ## Presets
 
@@ -77,6 +77,8 @@ python timelapse.py gui
 Scheduled and eternal presets created in the GUI start immediately in the background. Manual tasks open the YAML editor first because their required capture fields are not complete yet.
 
 Windows users can open `start_gui.bat`; macOS users can open `start_gui.command`. Source launchers prefer an active virtual environment, then `.venv`, then `venv`, and create `.venv` when necessary. Debug packages launch the bundled executable directly.
+
+Release packages are built with a windowed PyInstaller entry point. On Windows and Linux, launch the bundled `TimelapseManager` executable directly; on macOS, open `TimelapseManager.app`. Neither Release entry point opens a console window. Keep the extracted macOS `.app` beside its bundled `config` directory so portable configuration remains available.
 
 ## CLI
 
@@ -191,7 +193,7 @@ Task state defaults to `.timelapse/tasks/<task-id>/`, containing `state.json`, `
 
 Eternal tasks store staging data and portable YAML queues under `<auto_root>/.eternal/`. Failed processing manifests remain available for retry on the next run.
 
-## Debug Packaging
+## Packaging
 
 Build on each target operating system because PyInstaller does not cross-compile:
 
@@ -200,10 +202,22 @@ python -m pip install -r requirements-dev.txt
 python scripts/build_debug.py
 ```
 
-Archives are written to:
+Debug archives are written to:
 
 ```text
 bin/Debug-Archives/TimelapseManager-<win|mac|linux>-debug-portable-<yymmdd-hhmmss>.zip
+```
+
+Build a Release GUI package without a console window:
+
+```bash
+python scripts/build_release.py
+```
+
+Release archives are written to:
+
+```text
+bin/Release-Archives/TimelapseManager-<win|mac|linux>-release-portable-<yymmdd-hhmmss>.zip
 ```
 
 ## Development

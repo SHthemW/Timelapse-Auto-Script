@@ -13,7 +13,15 @@ def application_root() -> Path:
     if override:
         return Path(override).expanduser().resolve()
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        executable = Path(sys.executable).resolve()
+        if sys.platform == "darwin":
+            bundle = next(
+                (parent for parent in executable.parents if parent.suffix == ".app"),
+                None,
+            )
+            if bundle is not None:
+                return bundle.parent
+        return executable.parent
     source_root = Path(__file__).resolve().parents[2]
     if (source_root / "timelapse.py").is_file():
         return source_root

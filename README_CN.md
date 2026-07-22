@@ -15,7 +15,7 @@ Timelapse Manager 是一个跨平台 Python 延时摄影任务管理器。无界
 - 提供经过校验的任务级 YAML，以及 GUI 等宽字体编辑器。
 - 支持浅色、深色和跟随系统外观。
 - 支持 webhook 文本与图片通知、磁盘空间告警和异常状态恢复。
-- 为当前平台生成 debug portable 归档。
+- 为当前平台生成 Debug 和 Release portable 归档。
 
 ## 内置预设
 
@@ -77,6 +77,8 @@ python timelapse.py gui
 在 GUI 中创建定时或 eternal 预设后，任务会立即在后台启动。Manual 任务的必填拍摄字段尚不完整，因此仍会先打开 YAML 编辑器。
 
 Windows 可以打开 `start_gui.bat`，macOS 可以打开 `start_gui.command`。源码启动器依次选择当前虚拟环境、`.venv` 和 `venv`，必要时自动创建 `.venv`。debug 包会直接启动捆绑的可执行文件。
+
+Release 包使用无控制台的 PyInstaller GUI 入口。Windows 和 Linux 直接打开捆绑的 `TimelapseManager` 可执行文件，macOS 直接打开 `TimelapseManager.app`，都不会显示控制台窗口。macOS 请保持解压后的 `.app` 与同级 `config` 目录在一起，以保留便携配置。
 
 ## CLI
 
@@ -191,7 +193,7 @@ continuation:
 
 Eternal 任务把暂存数据和跨平台 YAML 队列放在 `<auto_root>/.eternal/`。处理失败的清单会保留到下次运行重试。
 
-## Debug 打包
+## 打包
 
 PyInstaller 不支持交叉编译，因此需要在每个目标系统上分别构建：
 
@@ -200,10 +202,22 @@ python -m pip install -r requirements-dev.txt
 python scripts/build_debug.py
 ```
 
-归档输出到：
+Debug 归档输出到：
 
 ```text
 bin/Debug-Archives/TimelapseManager-<win|mac|linux>-debug-portable-<yymmdd-hhmmss>.zip
+```
+
+构建不显示控制台窗口的 Release GUI 包：
+
+```bash
+python scripts/build_release.py
+```
+
+Release 归档输出到：
+
+```text
+bin/Release-Archives/TimelapseManager-<win|mac|linux>-release-portable-<yymmdd-hhmmss>.zip
 ```
 
 ## 开发与测试
